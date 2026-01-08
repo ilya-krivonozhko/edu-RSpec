@@ -8,7 +8,7 @@
 - изучаю основные возможности RSpec
 - выполняю практические задания и примеры
 - фиксирую важные моменты и паттерны тестирования
-- составляю собственные **шпаргалки (cheatsheets)** по RSpec для быстрого повторения и дальнейшего использования
+- составляю собственные **шпаргалки [RU](cheatsheet_ru.md)/[EN](cheatsheet.md)** по RSpec для быстрого повторения и дальнейшего использования
 
 Репозиторий предназначен в первую очередь для учебных целей и личного использования, но может быть полезен и другим, кто изучает RSpec.
 
@@ -22,7 +22,7 @@ During the learning process, I:
 - study the core features of RSpec
 - complete practical exercises and examples
 - document important concepts and testing patterns
-- create my own **RSpec cheatsheets** for quick reference and future use
+- create my own **RSpec cheatsheets[RU](cheatsheet_ru.md)/[EN](cheatsheet.md)** for quick reference and future use
 
 This repository is primarily intended for educational and personal use, but it may also be helpful for others learning RSpec.
 
