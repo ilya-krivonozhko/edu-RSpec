@@ -5,17 +5,17 @@ RSpec.describe ExchangeIt::Account do
   let(:john) { described_class.new(user_class.new('John', 'Doe')) }
   let(:ann) { described_class.new(user_class.new('Ann', 'Smith')) }
 
-  it 'has zero balance' do
+  it 'has zero balance', :fast do
     expect(john.balance).to eq(0)
   end
 
-  it 'has proper uid' do
+  it 'has proper uid', :fast do
     expect(john.uid).to be_an_instance_of(String)
     hash = john.hash 'John', 'Doe'
     expect(john.uid).to eq(hash)
   end
 
-  describe '#deposit' do
+  describe '#deposit', :fast do
     it 'allows to deposit correct sum' do
       ann.deposit 30
       expect(ann.balance).to eq(30)
@@ -33,7 +33,7 @@ RSpec.describe ExchangeIt::Account do
   context 'when performing money withdrawal' do
     before { john.deposit 100 }
 
-    specify '#transfer' do
+    specify '#transfer', :linux_only do
       expect(ann.balance).to eq(0)
 
       john.transfer ann, 30
