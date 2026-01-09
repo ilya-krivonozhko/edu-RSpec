@@ -1,16 +1,19 @@
 # RSpec Cheatsheet
 
+## [Official documentation](https://rspec.info/documentation/)
+
+## [Style Guide](https://rspec.rubystyle.guide/)
+
 ## Table of Contents
 
 1. [Declaring tests and grouping examples](#declaring-tests-and-grouping-examples)
 2. [Expectation / Matcher Methods](#expectation--matcher-methods)
-3. [Declaring test objects (let)](#declaring-test-objects-let)
-4. [Using described_class](#using-described_class)
-5. [Using stubs / doubles](#using-stubs--doubles)
-6. [Dummy class for modules](#dummy-class-for-modules)
-7. [Hooks: before, after, around](#hooks-before-after-around)
-8. [Tags and metadata](#tags-and-metadata)
-9. [Running RSpec from command line](#running-rspec-from-command-line)
+3. [Declaring test objects (`let`)](#declaring-test-objects-let)
+4. [Using `described_class`](#using-described_class)
+5. [Test doubles and isolation](#test-doubles-and-isolation)
+6. [Hooks: `before`, `after`, `around`](#hooks-before-after-around)
+7. [Tags and metadata](#tags-and-metadata)
+8. [Running RSpec from command line](#running-rspec-from-command-line)
 
 ## Declaring tests and grouping examples
 
@@ -60,12 +63,12 @@ RSpec.describe 'Matchers' do
     expect(10).not_to eq(5)            # negative match
     # stricter than be_a / be_an / be_kind_of (does not allow subclasses)
     expect("Hello").to be_an_instance_of(String) # type check
-    end
+  end
 end
 ```
-## Declaring test objects (let)
-* let is lazy (evaluated on first call)
-* let! is eager (evaluated before each example)
+## Declaring test objects (`let`)
+* `let` is lazy (evaluated on first call)
+* `let!` is eager (evaluated before each example)
 ```ruby
 RSpec.describe 'Using let' do
   let(:user) { { name: 'Alice', age: 30 } }  # memoized helper
@@ -75,8 +78,8 @@ RSpec.describe 'Using let' do
   end
 end
 ```
-* let is memoized per-example, not shared between examples
-## Using described_class
+* `let` is memoized per-example, not shared between examples
+## Using `described_class`
 ```ruby
 RSpec.describe ExchangeIt::Account do
   let(:user_class) { Struct.new(:name, :surname) }
@@ -87,31 +90,10 @@ RSpec.describe ExchangeIt::Account do
   end
 end
 ```
-## Using stubs / doubles
+## Test doubles and isolation
+### Dummy class for testing modules (not an RSpec double)
+Modules cannot be instantiated directly. Use a dummy class to test module behavior. This pattern is useful when testing modules with behavior but no state.
 ```ruby
-class Service
-  def perform; end
-end
-
-RSpec.describe Service do
-  it 'can be stubbed' do
-    fake_service = double('Service')
-    allow(fake_service).to receive(:perform).and_return(true)
-    expect(fake_service.perform).to eq(true)
-  end
-end
-```
-Prefer verifying doubles when possible:
-* instance_double(Service)
-* class_double(Service)
-```ruby
-fake_service = instance_double(Service, perform: true)
-expect(fake_service.perform).to eq(true)
-```
-## Dummy class for modules
-Modules cannot be instantiated directly. Use a dummy class to test module behavior.
-```ruby
-
 module ExchangeIt
   module Utils
     module Uid
@@ -128,8 +110,137 @@ RSpec.describe ExchangeIt::Utils::Uid do
   end
 end
 ```
-## Hooks: before, after, around
-Prefer let over instance variables (@var), but instance variables are still supported
+### Stub vs Mock vs Spy vs Null Object
+![img](img/img.png)
+
+RSpec provides several types of test doubles with different purposes.
+
+#### Stub
+A stub defines a predefined response but does not set expectations by itself.
+```ruby
+converter = double(:converter, convert: 100)
+converter.convert # => 100
+```
+#### Mock
+A mock sets expectations before execution and fails if they are not met.
+```ruby
+converter = double(:converter)
+expect(converter).to receive(:convert)
+converter.convert
+```
+#### Spy
+A spy records messages and allows expectations after execution.
+```ruby
+converter = spy(:converter)
+converter.convert
+expect(converter).to have_received(:convert)
+```
+In modern RSpec usage, spies are generally preferred over classic mocks.
+#### Null Object
+A null object responds to any message without raising errors.
+```ruby
+converter = double(:converter).as_null_object
+converter.anything
+```
+#### Verifying doubles
+Verifying doubles ensure that stubbed or expected methods exist on the real object. They provide stronger guarantees by:
+* checking method existence
+* checking method visibility
+* failing when the real interface changes
+```ruby
+converter = instance_double(Converter)
+```
+Compared to a regular double, verifying doubles help keep tests aligned with real code.
+```ruby
+double(:converter)          # no interface verification
+instance_double(Converter)  # verifies instance methods
+class_double(Converter)     # verifies class methods
+```
+#### Shorthand stub syntax equivalence
+The following two forms are equivalent.
+```ruby
+converter = instance_double(described_class, convert: 100)
+```
+Is equivalent to:
+```ruby
+converter = instance_double(described_class)
+allow(converter).to receive(:convert).and_return(100)
+```
+The shorthand form is syntactic sugar and is useful for simple cases. Use explicit `allow` when more configuration is needed.
+#### Argument constraints with `with`
+You can restrict stubs or expectations to respond only to specific arguments.
+```ruby
+allow(converter).to receive(:convert)
+  .with(sum: 80)
+  .and_return(100)
+```
+If the method is called with different arguments, the test will fail. This helps make expectations more precise.
+#### Partial doubles (partial stubs)
+A partial double is a real object with some methods stubbed. Use partial doubles with care, as they couple tests to implementation details.
+```ruby
+specify '#transfer_with_conversion' do
+  allow(john).to receive(:convert)
+    .with(sum: 50, from: :usd, to: :eur)
+    .and_return(40)
+
+  john.transfer_with_conversion(ann, 50, :usd, :eur)
+
+  expect(john.balance).to eq(50)
+  expect(ann.balance).to eq(40)
+  expect(john).to have_received(:convert).once
+end
+```
+Partial doubles are useful when you want to test real behavior while isolating specific dependencies.
+### Matchers for spies
+Spies allow verifying received messages after execution.
+```ruby
+user = spy(:user)
+user.login
+user.logout
+expect(user).to have_received(:login)
+expect(user).to have_received(:logout).once
+expect(user).to have_received(:login).with(no_args)
+```
+Common spy-related matchers:
+* `have_received`
+* `once, twice`
+* `exactly(n).times`
+* `with(...)`
+* `ordered`
+#### Configuring responses (RSpec Mocks)
+When allowing or expecting messages, the default response is `nil`. RSpec provides several methods to configure responses.
+##### `and_return` Returns a specific value.
+```ruby
+allow(converter).to receive(:convert).and_return(100)
+```
+##### `and_raise` Raises an exception.
+```ruby
+allow(converter).to receive(:convert).and_raise(StandardError)
+```
+##### `and_throw` Throws a symbol.
+```ruby
+allow(converter).to receive(:convert).and_throw(:error)
+```
+##### `and_yield` Yields control to a block.
+```ruby
+allow(converter).to receive(:convert).and_yield(100)
+```
+##### `and_call_original` Calls the original implementation.
+```ruby
+allow(converter).to receive(:convert).and_call_original
+```
+##### `and_wrap_original` Wraps the original method.
+```ruby
+allow(converter).to receive(:convert).and_wrap_original do |original, *args|
+  original.call(*args) * 2
+end
+```
+##### `and_invoke` Invokes a callable object.
+```ruby
+allow(converter).to receive(:convert).and_invoke(-> { 100 })
+```
+## Hooks: `before`, `after`, `around`
+Prefer `let` over instance variables `@var` for clarity and isolation. But instance variables are still supported
 ```ruby
 RSpec.describe 'Hooks' do
   before(:each) do
@@ -171,7 +282,7 @@ RSpec.describe 'Tags' do
   end
 end
 ```
-### Tags on describe / context blocks
+### Tags on `describe` / `context` blocks
 ```ruby
 RSpec.describe 'Utils', :utils do
   it 'inherits metadata from describe' do
@@ -179,7 +290,7 @@ RSpec.describe 'Utils', :utils do
   end
 end
 ```
-### Directory-based metadata (spec_helper.rb)
+### Directory-based metadata (`spec_helper.rb`)
 Assign metadata to all specs in a directory:
 ```ruby
 RSpec.configure do |config|
@@ -188,7 +299,7 @@ RSpec.configure do |config|
   end
 end
 ```
-### Platform-specific tests (spec_helper.rb)
+### Platform-specific tests (`spec_helper.rb`)
 Example: exclude specs unless running on Linux
 ```ruby
 RSpec.configure do |config|
@@ -209,7 +320,7 @@ rspec --tag ~fast
 rspec -e name
 ```
 ### Run only failed specs from previous run
-In spec_helper.rb:
+In `spec_helper.rb`:
 ```ruby
 RSpec.configure do |config|
   config.example_status_persistence_file_path = 'spec/specs.txt'
@@ -226,9 +337,10 @@ rspec . --profile 3
 (3 can be replaced with any number)
 ### Focused specs
 RSpec provides focused versions of examples and groups:
-* fit → same as it ..., :focus
-* fspecify → same as specify ..., :focus
-* fdescribe → same as describe ..., :focus
+* `fit` → same as `it ..., :focus`
+* `fspecify` → same as `specify ..., :focus`
+* `fdescribe` → same as `describe ..., :focus`
+
 Run focused specs:
 ```bash
 rspec --tag focus .

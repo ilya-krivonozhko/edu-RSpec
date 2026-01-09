@@ -3,6 +3,7 @@
 module ExchangeIt
   class Account
     include ExchangeIt::Utils::Uid
+    include ExchangeIt::Api::Converter
 
     attr_reader :uid, :balance
 
@@ -14,6 +15,13 @@ module ExchangeIt
     def transfer(reciever, amount)
       withdraw amount
       reciever.deposit amount
+    end
+
+    def transfer_with_conversion(reciever, amount, in_currency, out_currency)
+      converted_amount = convert sum: amount, from: in_currency, to: out_currency
+
+      withdraw amount
+      reciever.deposit converted_amount
     end
 
     def withdraw(amount)
