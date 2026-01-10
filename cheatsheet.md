@@ -203,7 +203,7 @@ expect(user).to have_received(:login).with(no_args)
 ```
 Common spy-related matchers:
 * `have_received`
-* `once, twice`
+* `once`, `twice`
 * `exactly(n).times`
 * `with(...)`
 * `ordered`

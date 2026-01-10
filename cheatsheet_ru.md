@@ -1,5 +1,9 @@
 # Шпаргалка по RSpec
 
+## [Официальная документация](https://rspec.info/documentation/)
+
+## [Соглашения по стилю кода](https://rspec.rubystyle.guide/)
+
 ## Содержание
 
 1. [Объявление тестов и группировка примеров](#объявление-тестов-и-группировка-примеров)
@@ -162,7 +166,7 @@ converter = instance_double(described_class)
 allow(converter).to receive(:convert).and_return(100)
 ```
 Сокращённая форма — это синтаксический сахар, удобный для простых случаев. Используйте явный `allow`, если требуется более сложная настройка.
-#### Ограничение аргументов с помощью with
+#### Ограничение аргументов с помощью `with`
 Можно ограничить заглушки или ожидания так, чтобы они срабатывали только для определённых аргументов.
 ```ruby
 allow(converter).to receive(:convert)
@@ -198,7 +202,7 @@ expect(user).to have_received(:login).with(no_args)
 ```
 Распространённые matchers для spies:
 * `have_received`
-* `once, twice`
+* `once`, `twice`
 * `exactly(n).times`
 * `with(...)`
 * `ordered`
@@ -348,7 +352,7 @@ rspec --format documentation
 ```bash
 rspec --seed 12345
 ```
-or
+или
 ```bash
 rspec --order rand
 ```
